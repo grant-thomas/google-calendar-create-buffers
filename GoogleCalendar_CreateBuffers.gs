@@ -73,9 +73,6 @@ function myFunction() {
       Logger.log("CURRENTLY PROCESSING: " + events[i].summary + " " + formattedDateTime);
 
     // ============================================================================================================== //
-    
-
-    // ============================================================================================================== //
     // IF THE EVENT IS A BUFFER
     //
     // TEST IF AN EVENT WAS DELETED, IF SO THEN DELETE THE BUFFER EVENTS CONNECTED TO IT
@@ -111,20 +108,6 @@ function myFunction() {
 
         var prevEvent = events[i - 1];
         Logger.log("Post buffer - previous event[i-1] = " + events[i-1].summary);
-
-        // EDGE CASE: TWO BUFFERS ARE IN A ROW
-        // if (prevEvent.summary == '-')
-        //   continue;
-
-        // var start = new Date(currentEvent.start.dateTime-10);
-        // var end   = new Date(currentEvent.start.dateTime-5);
-        // var postCheck = CalendarApp.getCalendarById(calendarID).getEvents(start, end);
-        // Logger.log("post buffer events preceeding: " + postCheck.length);
-        // if (postCheck.length < 1) {
-        //   Logger.log("Post buffer is disconnected! Deleting it.");
-        //   var removeEvent = CalendarApp.getCalendarById(calendarID).getEventById(events[i].id);
-        //   removeEvent.deleteEvent();
-        // }
 
         // EDGE CASE: WHEN AN EVENT IS MOVED ONTOP OF A PREVIOUS EVENT, 
         // THE FIRST EVENT'S POST-BUFFER COMES AFTER THE SECOND EVENT STARTS,
@@ -233,7 +216,6 @@ function myFunction() {
     }
   } // END OF FIRST SEARCH
 
-  
   // ============================================================================================================== //
   // NOW SEARCH THROUGH EVENTS AGAIN...
   // CHECK IF THERE IS A BUFFER OVERLAPPING INTO AN EVENT, IF SO, THEN DELETE THE BUFFER
