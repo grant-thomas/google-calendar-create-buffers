@@ -6,16 +6,13 @@ function myFunction() {
   // 11-20-23 REMOVED Logger.log("This is a pre buffer.") AND Logger.log("This is a post buffer.")
   // 01-02-24 ADDED FUNCTIONALITY TO REMOVE OVERLAPPING BUFFERS
 
-
   // USER INPUT CALENDAR
   const calendar = "Grant Sessions"; // NAME OF CALENDAR BEING MODIFIED
   const calendarID = CalendarApp.getCalendarsByName(calendar)[0].getId(); // GET CALENDAR ID
   Logger.log("Modifying buffers for calendarID: " + calendarID);
 
-
   // USER INPUT BUFFER LENGTH (IN MINUTES)
   const bufferLength = 30;
-
 
   // USER INPUT BUFFER COLOR
   const bufferColor = 'RED';
@@ -31,7 +28,6 @@ function myFunction() {
   Logger.log("Start date = " + startDate);
   Logger.log("End date   = " + endDate);
   
-
   var optionalArgs = {
     timeMin: startDate.toISOString(),
     timeMax: endDate.toISOString(),
@@ -40,7 +36,6 @@ function myFunction() {
     orderBy: 'startTime'
   };
   
-
   // CREATE LIST OF CALENDAR ALL CALEDNAR EVENTS ON USER'S CALENDAR THAT BETWEEN THE SPECIFIED DATES
   var service = Calendar.Events;
   var response = Calendar.Events.list(calendarID, optionalArgs);
