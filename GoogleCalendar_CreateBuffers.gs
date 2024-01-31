@@ -1,7 +1,10 @@
-// Google Calendar (ICON Create Buffers)
-
 function myFunction() {
   // THIS SCRIPT CREATES "BUFFER" EVENTS BEFORE AND AFTER NEWLY CREATED CALENDAR EVENTS
+
+  // UPDATES
+  // 11-15-23 ADDED event.removeAllReminders() FOR PRE AND POST BUFFERS
+  // 11-20-23 REMOVED Logger.log("This is a pre buffer.") AND Logger.log("This is a post buffer.")
+  // 01-02-24 ADDED FUNCTIONALITY TO REMOVE OVERLAPPING BUFFERS
 
 
   // USER INPUT CALENDAR
@@ -17,10 +20,14 @@ function myFunction() {
   // USER INPUT BUFFER COLOR
   const bufferColor = 'RED';
 
-  // SET DATE RANGE (DEFAULT IS 180 DAYS FROM THE CURRENT DAY)
+  // SET DATE RANGE (DEFAULT IS 90 DAYS FROM THE CURRENT DAY)
   var startDate = new Date(); // START DATE OF THE RANGE TO BE MODIFIED
+  startDate.setHours(0,0,0,0); // SET TO THE BEGINNING OF THE CURRENT DAY
+
   var endDate   = new Date(); // END DATE OF THE RANGE TO BE MOFIFIED (90 DAYS FROM TODAY)
   endDate.setDate(startDate.getDate() + 90);
+  endDate.setHours(0,0,0,0); // SET TO THE BEGINNING OF THE DAY
+
   Logger.log("Start date = " + startDate);
   Logger.log("End date   = " + endDate);
   
@@ -39,10 +46,34 @@ function myFunction() {
   var response = Calendar.Events.list(calendarID, optionalArgs);
   var events = response.items;
 
+  // INITIAL ORDER OF EVENTS
+  for (i = 0; i < events.length; i++) {
+    Logger.log("ORDER: " + events[i].summary);
+  }
+  Logger.log("");
+
+  // ============================================================================================================== //
   // SEARCH THROUGH EVENTS
+  
   for (i = 0; i < events.length; i++) {    
-    // LIST EACH EVENT
-    //Logger.log(events[i].summary);
+
+      // DISPLAY WHICH EVENT IS CURRENTLY BEING PROCESSED
+      // FORMAT THE DATE OUTPUT
+      //
+      const dateTime = new Date(events[i].start.dateTime)
+      const formattedDateTime = new Intl.DateTimeFormat('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+        }).format(dateTime);
+
+      Logger.log("CURRENTLY PROCESSING: " + events[i].summary + " " + formattedDateTime);
+
+    // ============================================================================================================== //
+    
 
     // ============================================================================================================== //
     // IF THE EVENT IS A BUFFER
@@ -50,16 +81,15 @@ function myFunction() {
     // TEST IF AN EVENT WAS DELETED, IF SO THEN DELETE THE BUFFER EVENTS CONNECTED TO IT
     // METHOD: IF EITHER THE PRE BUFFER OR POST BUFFER BECOMES DISCONNECTED FROM THE EVENT, THEN DELETE IT
     //
-    if (events[i].summary == "-"){
+    // CHECK IF THE PRE BUFFER IS DISCONNECTED
+    if (events[i].summary == "-") {
       
-      // CHECK IF THE PRE BUFFER IS DISCONNECTED
       if (events[i].description == "pre buffer"){
-        //Logger.log("This is a pre buffer.")
 
         var currentEvent = events[i];
         var nextEvent = events[i + 1];
 
-        // CHECK IF THE NEXT EVENT START IMMEDIATELY AFTER THE CURRENT EVENT ENDS, IF NOT THEN DELETE THE BUFFER
+        // CHECK IF THE NEXT EVENT STARTS IMMEDIATELY AFTER THIS PRE-BUFFER ENDS, IF NOT THEN DELETE THIS PRE-BUFFER
         var preBufferConnected = currentEvent.end.dateTime === nextEvent.start.dateTime;
         if (!preBufferConnected){
           Logger.log("Pre buffer is disconnected! Deleting it.");
@@ -70,12 +100,39 @@ function myFunction() {
 
       // CHECK IF THE POST BUFFER IS DISCONNECTED
       else if (events[i].description == "post buffer"){
-        //Logger.log("This is a post buffer.")
 
         var currentEvent = events[i];
-        var prevEvent = events[i - 1];
+        Logger.log("Post buffer - current event[i] = " + events[i].summary);
 
-        // CHECK IF THE PREVIOUS EVENT ENDS IMMEDIATELY BEFORE THE CURRENT EVENT STARTS, IF NOT THEN DELETE THE BUFFER
+        // EDGE CASE: A POST BUFFER IS ACTING AS BOTH A PRE AND POST BUFFER - SKIP THE CURRENT ITERATION
+        // BECAUSE THERE IS NO EVENT BEFORE THE CURRENT EVENT SO events[i-1] IS OUT OF BOUNDS
+        if (i == 0)
+          continue;
+
+        var prevEvent = events[i - 1];
+        Logger.log("Post buffer - previous event[i-1] = " + events[i-1].summary);
+
+        // EDGE CASE: TWO BUFFERS ARE IN A ROW
+        // if (prevEvent.summary == '-')
+        //   continue;
+
+        // var start = new Date(currentEvent.start.dateTime-10);
+        // var end   = new Date(currentEvent.start.dateTime-5);
+        // var postCheck = CalendarApp.getCalendarById(calendarID).getEvents(start, end);
+        // Logger.log("post buffer events preceeding: " + postCheck.length);
+        // if (postCheck.length < 1) {
+        //   Logger.log("Post buffer is disconnected! Deleting it.");
+        //   var removeEvent = CalendarApp.getCalendarById(calendarID).getEventById(events[i].id);
+        //   removeEvent.deleteEvent();
+        // }
+
+        // EDGE CASE: WHEN AN EVENT IS MOVED ONTOP OF A PREVIOUS EVENT, 
+        // THE FIRST EVENT'S POST-BUFFER COMES AFTER THE SECOND EVENT STARTS,
+        // INSTEAD OF THE FIRST EVENT THAT IT IS ATTACHED TO, THEN SKIP THE CURRENT ITERATION
+        if (prevEvent.end.dateTime > currentEvent.start.dateTime)
+          continue;
+
+        // CHECK IF THE PREVIOUS EVENT ENDS IMMEDIATELY BEFORE THIS POST-BUFFER STARTS, IF NOT THEN DELETE THIS POST-BUFFER
         var postBufferConnected = currentEvent.start.dateTime === prevEvent.end.dateTime;
         if (!postBufferConnected){
           Logger.log("Post buffer is disconnected! Deleting it.");
@@ -85,14 +142,12 @@ function myFunction() {
       }
     }
 
-    // ============================================================================================================== //
-    // ELSE THE EVENT IS NOT BUFFER
-    // 
+    // ELSE, THE EVENT IS NOT A BUFFER
+    //
     // CREATE 30 MIN BUFFERS BEFORE AND AFTER THE EVENT
     // [ 30 MIN BUFFER ][ EVENT ][ 30 MIN BUFFER ]
-    //
-    else{
 
+    else{
 
       // PRE BUFFER START AND END TIMES
       var preBufferEnd = new Date(events[i].start.dateTime);
@@ -120,12 +175,17 @@ function myFunction() {
       }
       else{
         // CREATE PRE BUFFER
+        Logger.log("Creating PRE-BUFFER");
         var event = CalendarApp.getCalendarById(calendarID).createEvent(
           '-',
           preBufferStart,
           preBufferEnd,
           { description: 'pre buffer'}
         );
+
+        // REMOVE DEFAULT 1HR REMINDER
+        event.removeAllReminders();
+
         
         // SET PRE BUFFER COLOR
         if (bufferColor == 'RED') {event.setColor(CalendarApp.EventColor.RED)}
@@ -135,41 +195,6 @@ function myFunction() {
         else if (bufferColor == 'BLUE') {event.setColor(CalendarApp.EventColor.BLUE)}
         else {event.setColor(CalendarApp.EventColor.PURPLE)};
       }
-
-      // ================================================================================= //
-      // DISPLAY WHICH EVENT IS CURRENTLY BEING PROCESSED
-      // FORMAT THE DATE OUTPUT
-      //
-      const dateTime = new Date(events[i].start.dateTime)
-      const formattedDateTime = new Intl.DateTimeFormat('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
-        }).format(dateTime);
-
-      Logger.log(events[i].summary + " " + formattedDateTime);
-
-
-      const dateTimeString = "2023-11-09T16:30:00-06:00";
-
-      // // Convert to Date object
-      // const dateTime = new Date(dateTimeString);
-
-      // // Format the date and time
-      // const formattedDateTime = new Intl.DateTimeFormat('en-US', {
-      //   year: '2-digit',
-      //   month: '2-digit',
-      //   day: '2-digit',
-      //   hour: '2-digit',
-      //   minute: '2-digit',
-      //   timeZoneName: 'short'
-      // }).format(dateTime);
-
-      // console.log('Formatted Date and Time:', formattedDateTime);
-
 
       // ================================================================================= //
       // ================================= POST BUFFER =================================== //
@@ -186,12 +211,16 @@ function myFunction() {
       }
       else{
         // CREATE POST BUFFER 
+        Logger.log("Creating POST-BUFFER");
         var event = CalendarApp.getCalendarById(calendarID).createEvent(
           '-',
           postBufferStart,
           postBufferEnd,
           { description: 'post buffer'}
         );
+
+        // REMOVE DEFAULT 1HR REMINDER
+        event.removeAllReminders();
 
         // SET POST BUFFER COLOR
         if (bufferColor == 'RED') {event.setColor(CalendarApp.EventColor.RED)}
@@ -202,17 +231,34 @@ function myFunction() {
         else {event.setColor(CalendarApp.EventColor.PURPLE)};
       }
     }
+  } // END OF FIRST SEARCH
 
+  
+  // ============================================================================================================== //
+  // NOW SEARCH THROUGH EVENTS AGAIN...
+  // CHECK IF THERE IS A BUFFER OVERLAPPING INTO AN EVENT, IF SO, THEN DELETE THE BUFFER
+  
+  for (i = 0; i < events.length; i++) {
+    if (events[i].summary != '-'){
+      Logger.log("Testing for overlap: " + events[i].summary);
 
-
-
-
-    // ================================================================================= //
-    try{  
-      service.update(events[i], calendarID, events[i].id);
-    }
-    catch(e){
-      Logger.log(e);
+      var eventCheck = CalendarApp.getCalendarById(calendarID).getEvents(new Date(events[i].start.dateTime), new Date(events[i].end.dateTime));
+      // CHECK IF THERE IS ALREADY A PRE BUFFER
+      var eventWithTitleExists = eventCheck.some(function (eventCheck) {
+        return eventCheck.getTitle() === '-';
+      });
+      // LOG THE RESULT
+      if (eventWithTitleExists) {
+        for (var x = 0; x < eventCheck.length; x++){
+          if (eventCheck[x].getTitle() == '-'){
+            Logger.log("Deleting Overlap Event: " + eventCheck[x].getTitle() + " " + eventCheck[x].getStartTime());
+            var removeEvent = CalendarApp.getCalendarById(calendarID).getEventById(eventCheck[x].getId());
+            removeEvent.deleteEvent();
+          }
+        }
+      }
     }
   }
+  
+  Logger.log("END.")
 }
