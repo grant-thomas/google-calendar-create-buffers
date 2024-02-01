@@ -1,4 +1,4 @@
-function myFunction() {
+function createBuffers() {
   // THIS SCRIPT CREATES "BUFFER" EVENTS BEFORE AND AFTER NEWLY CREATED CALENDAR EVENTS
 
   // UPDATES
@@ -7,7 +7,7 @@ function myFunction() {
   // 01-02-24 ADDED FUNCTIONALITY TO REMOVE OVERLAPPING BUFFERS
 
   // USER INPUT CALENDAR
-  const calendar = "Grant Sessions"; // NAME OF CALENDAR BEING MODIFIED
+  const calendar = "Calendar Name"; // NAME OF CALENDAR BEING MODIFIED
   const calendarID = CalendarApp.getCalendarsByName(calendar)[0].getId(); // GET CALENDAR ID
   Logger.log("Modifying buffers for calendarID: " + calendarID);
 
